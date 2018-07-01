@@ -1,0 +1,4 @@
+mode=profile
+script-delay=1000
+prox-change-delay=2000
+cookie-delete-delay=2000
