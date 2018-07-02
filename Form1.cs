@@ -23,6 +23,7 @@ namespace Youtube
         List<ConfigVO> configVOs = null;
         List<LoveConfigVO> loveConfigVOs = null;
         List<ProfileConfigVO> profileConfigVOs = null;
+        List<ChannelConfigVO> channelConfigVOs = null;
         List<PasswordConfigVO> passwordConfigVOs = null;
 
         Dictionary<string, object> programConfig = new Dictionary<string, object>();
@@ -52,9 +53,7 @@ namespace Youtube
         {
             // 프로그램 설정파일 로드
             ProgramConfigFileInitialize("./config/program.txt");
-
             
-
             // 공통 설정파일 로드
             ConfigFileInitialize("./config/auth.txt",  "./config/comment.txt", "./config/url.txt");            
 
@@ -103,12 +102,72 @@ namespace Youtube
             {
                 // 프로필변경 관련 설정 파일 로드
                 ProfileConfigFileInitialize("./config/profile.txt");
-
                 await ProfileModeProcessAsync();
+            }
+            else if (mode.Equals("make-channel"))
+            {
+                // 채널 관련 설정 파일 로드
+                ChannelConfigFileInitialize("./config/channel.txt");
+                await ChannelModeProcessAsync();
             }
         }
 
-      
+        private async Task ChannelModeProcessAsync()
+        {
+            await LoadPageAsync(browser, START_PAGE_URL);
+
+            for (int i = 0; i < configVOs.Count; i++)
+            {
+                ConfigVO configVO = configVOs[i];
+                ChannelConfigVO channelVO = channelConfigVOs[i];
+
+                // 프록시 서버 변경
+                ChangeProxServer(configVO.ip);
+                await Task.Delay(Int32.Parse((String)programConfig["prox-change-delay"]));
+
+                // 로그인 처리
+                await LoginYoutubeAsync(configVO.username, configVO.password, configVO.getMophnNo());
+
+                // 채널 생성 루프
+                foreach (string name in channelVO.list)
+                {
+                    // 채널 목록으로 이동
+                    await LoadPageAsync(browser, "https://www.youtube.com/channel_switcher?feature=settings&next=%2Faccount");
+
+                    // 채널 생성
+                    await CreateChannel( name);
+                }
+                
+                // 쿠키 삭제
+                DeleteCookie();
+                await Task.Delay(Int32.Parse((String)programConfig["cookie-delete-delay"]));
+            }
+
+        }
+
+        private async Task CreateChannel(string name)
+        {
+            browser.Focus();
+
+            // 제이쿼리 로드
+            await LoadJqueryAsync();
+
+            // 새 채널 만들기
+            await EvaluateScriptAsync("$('div.create-channel-text').click()");
+
+            // 페이지 이동 대기
+            await WaitForPageLoadingAsync();
+
+            // 채널명 입력
+            await EvaluateScriptAsync(String.Format("document.querySelector('#PlusPageName').value = '{0}'", name));
+
+            // 새 채널 만들기
+            await EvaluateScriptAsync("document.querySelector('#submitbutton').click()");
+
+            // 채널생성 대기
+            await WaitForPageLoadingAsync();
+        }
+
         private async Task PasswordModeProcessAsync()
         {
 
@@ -123,10 +182,10 @@ namespace Youtube
             {
                 ConfigVO configVO = configVOs[i];
                 ProfileConfigVO profileConfigVO = profileConfigVOs[i];
-            
+
                 // 프록시 서버 변경
                 ChangeProxServer(configVO.ip);
-                await Task.Delay(2000);
+                await Task.Delay(Int32.Parse((String)programConfig["prox-change-delay"]));
 
                 // 로그인 처리
                 await LoginYoutubeAsync(configVO.username, configVO.password, configVO.getMophnNo());
@@ -139,7 +198,7 @@ namespace Youtube
 
                 // 쿠키 삭제
                 DeleteCookie();
-                await Task.Delay(2000);
+                await Task.Delay(Int32.Parse((String)programConfig["cookie-delete-delay"]));
             }
 
         }    
@@ -172,7 +231,7 @@ namespace Youtube
             {
                 // 프록시 서버 변경
                 ChangeProxServer(configVO.ip);
-                await Task.Delay(2000);
+                await Task.Delay(Int32.Parse((String)programConfig["prox-change-delay"]));
 
                 // 로그인 처리
                 await LoginYoutubeAsync(configVO.username, configVO.password, configVO.getMophnNo());
@@ -197,7 +256,7 @@ namespace Youtube
 
                 // 쿠키 삭제
                 DeleteCookie();
-                await Task.Delay(2000);
+                await Task.Delay(Int32.Parse((String)programConfig["cookie-delete-delay"]));
             }
         }
 
@@ -550,6 +609,39 @@ namespace Youtube
             file.Close();
 
             this.profileConfigVOs = profileConfigVOs;
+        }
+
+        private void ChannelConfigFileInitialize(string filePath)
+        {
+            string line;
+            int counter = 0;
+
+            List<ChannelConfigVO> channelConfigVOs = new List<ChannelConfigVO>();
+
+            StreamReader file = new StreamReader(filePath, Encoding.Default, true);
+
+            while (((line = file.ReadLine()) != null && !file.Equals("")))
+            {
+                ChannelConfigVO channelConfigVO = new ChannelConfigVO();
+                List<string> list = new List<string>();
+
+                string[] s = line.Split('/');
+
+                foreach (string item in s)
+                {
+                    list.Add(item);
+                }
+
+                channelConfigVO.list = list;
+
+                channelConfigVOs.Add(channelConfigVO);
+
+                counter++;
+            }
+
+            file.Close();
+
+            this.channelConfigVOs = channelConfigVOs;
         }
 
 
