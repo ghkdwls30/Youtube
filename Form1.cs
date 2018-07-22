@@ -70,13 +70,12 @@ namespace Youtube
             Cef.Initialize(cefSettings);
             browser = new ChromiumWebBrowser(START_PAGE_URL);
             panel1.Controls.Add(browser);
-            browser.Dock = DockStyle.Fill;
+            browser.Dock = DockStyle.Fill;            
             MainAsync();
         }
 
         private async void MainAsync()
-        {
-
+        {            
             string mode = (String)programConfig["mode"];
 
             if (mode.Equals("comment"))
@@ -315,9 +314,13 @@ namespace Youtube
             await EvaluateScriptAsync("document.documentElement.scrollTop =" + scroll);
         }
 
+       // 댓글달기 모드
         private async Task CommentModeProcessAsync()
         {         
-            await LoadPageAsync(browser, START_PAGE_URL);
+            await LoadPageAsync(browser, START_PAGE_URL);            
+
+            string[] delays = ((string)programConfig["login-delay"]).Split(',');
+            int index = 0;
 
             foreach (ConfigVO configVO in configVOs)
             {
@@ -325,11 +328,20 @@ namespace Youtube
                 ChangeProxServer(configVO.ip);
                 await Task.Delay(Int32.Parse((String)programConfig["prox-change-delay"]));
 
+                if (index != 0) {                    
+                    int min = Int32.Parse(delays[0]);
+                    int max = Int32.Parse(delays[1]);
+                    await RandomWaitAsync( min, max);
+                }
+
                 // 로그인 처리
                 await LoginYoutubeAsync(configVO.username, configVO.password, configVO.getMophnNo());
 
                 // 댓글달 페이지로 이동
                 await LoadPageAsync(browser, configVO.url);
+
+                // 페이지 대기
+                await WaitForPageLoadingAsync();
 
                 // 댓글 달기
                 await addCommentAsync(configVO.comment);
@@ -343,7 +355,16 @@ namespace Youtube
                 // 쿠키 삭제
                 DeleteCookie();
                 await Task.Delay(Int32.Parse((String)programConfig["cookie-delete-delay"]));
+
+                index++;
             }
+        }
+
+        private async Task RandomWaitAsync(int minValue, int maxValue)
+        {
+            Random r = new Random();
+            int randomValue = r.Next(minValue, maxValue);
+            await Task.Delay( randomValue);
         }
 
         // 쿠키 삭제 메소드
@@ -356,8 +377,14 @@ namespace Youtube
         {
             browser.Focus();
 
-            await ScrollBy(200, 1000, 2);
+            //browser.ShowDevTools();
 
+            await ScrollElementBy("primary", 200, 1000, 1);
+            //await ScrollBy(200, 1000, 2);
+           
+            // 댓글창이 존재하는지 체크 체크            
+            await WaitForCheckScript("document.querySelector('#placeholder-area') !== null", 100);
+          
             await EvaluateScriptAsync("document.querySelector('#placeholder-area').click()");
             await EvaluateScriptAsync("document.querySelector('.textarea-container #textarea').focus()");
             await EvaluateScriptAsync(String.Format("document.querySelector('.textarea-container #textarea').value = '{0}'", comment));
@@ -365,7 +392,41 @@ namespace Youtube
             await SendKeyToBrowserAsync(0x0D);
             await EvaluateScriptAsync("document.querySelector('#submit-button').click()");
 
+            // 댓글이 달렸는지 체크
+            await WaitForCheckScript("document.querySelector('#placeholder-area[hidden]') !== null", 100);
+            
             await Task.Delay(3000);
+        }
+
+        private async Task ScrollElementBy(string id ,int height, int interval, int count)
+        {
+            int p = 0;
+            for (int i = 0; i < count; i++)
+            {
+                p += height;
+                await EvaluateScriptAsync("document.getElementById('"+ id +"').scrollTop =" + p);
+                await Task.Delay(interval);
+            }
+        }
+
+        private async Task WaitForCheckScript(string script, int delay)
+        {
+            while (true)
+            {
+                JavascriptResponse x = await EvaluateScriptAsync( script);
+
+                Console.WriteLine((Boolean)getResult(x));
+                
+                if ((Boolean)getResult(x))
+                {
+                    break;
+                }
+                else
+                {
+                    await Task.Delay(delay);
+                }
+            }
+
         }
 
         private async Task MoveHome() {

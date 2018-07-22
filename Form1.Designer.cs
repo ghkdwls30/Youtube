@@ -36,18 +36,18 @@
             // 
             this.panel1.Location = new System.Drawing.Point(-2, -1);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1187, 763);
+            this.panel1.Size = new System.Drawing.Size(1187, 909);
             this.panel1.TabIndex = 0;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1184, 761);
+            this.ClientSize = new System.Drawing.Size(1186, 909);
             this.Controls.Add(this.panel1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
-            this.Text = "유튜브 뷰어 v2";
+            this.Text = "유튜브 뷰어 v2.1";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
 
