@@ -1,0 +1,5 @@
+﻿mode=comment
+script-delay=1000
+prox-change-delay=2000
+cookie-delete-delay=2000
+login-delay=1,2
