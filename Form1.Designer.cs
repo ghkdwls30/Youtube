@@ -48,7 +48,7 @@
             this.Controls.Add(this.panel1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
-            this.Text = "유튜브 뷰어 v2.1";
+            this.Text = "유튜브 뷰어 v2.2";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
 

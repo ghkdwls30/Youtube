@@ -346,6 +346,9 @@ namespace Youtube
                 // 댓글 달기
                 await addCommentAsync(configVO.comment);
 
+                // 댓글 작성 후 대기시간 처리
+                await Task.Delay(Int32.Parse((String)programConfig["comment-post-delay"]));
+
                 // 홈으로 이동
                 await MoveHome();
 
@@ -383,19 +386,25 @@ namespace Youtube
             //await ScrollBy(200, 1000, 2);
            
             // 댓글창이 존재하는지 체크 체크            
-            await WaitForCheckScript("document.querySelector('#placeholder-area') !== null", 100);
-          
-            await EvaluateScriptAsync("document.querySelector('#placeholder-area').click()");
-            await EvaluateScriptAsync("document.querySelector('.textarea-container #textarea').focus()");
-            await EvaluateScriptAsync(String.Format("document.querySelector('.textarea-container #textarea').value = '{0}'", comment));
-            await EvaluateScriptAsync("document.querySelector('.textarea-container #textarea').focus()");
-            await SendKeyToBrowserAsync(0x0D);
-            await EvaluateScriptAsync("document.querySelector('#submit-button').click()");
+            bool success = await WaitForCheckScript("document.querySelector('#placeholder-area') !== null", 100);
 
-            // 댓글이 달렸는지 체크
-            await WaitForCheckScript("document.querySelector('#placeholder-area[hidden]') !== null", 100);
-            
-            await Task.Delay(3000);
+            if (success)
+            {
+                await EvaluateScriptAsync("document.querySelector('#placeholder-area').click()");
+                await EvaluateScriptAsync("document.querySelector('.textarea-container #textarea').focus()");
+                await EvaluateScriptAsync(String.Format("document.querySelector('.textarea-container #textarea').value = '{0}'", comment));
+                await EvaluateScriptAsync("document.querySelector('.textarea-container #textarea').focus()");
+                await SendKeyToBrowserAsync(0x0D);
+                await EvaluateScriptAsync("document.querySelector('#submit-button').click()");
+
+                // 클릭전송 대기시간
+                await Task.Delay(2000);
+
+                // 댓글이 달렸는지 체크
+                await WaitForCheckScript("document.querySelector('#placeholder-area[hidden]') === null", 100);
+
+                await Task.Delay(3000);
+            }
         }
 
         private async Task ScrollElementBy(string id ,int height, int interval, int count)
@@ -409,10 +418,18 @@ namespace Youtube
             }
         }
 
-        private async Task WaitForCheckScript(string script, int delay)
+        private async Task<bool> WaitForCheckScript(string script, int delay)
         {
+            int timeOutCnt = 20;
+
             while (true)
             {
+                timeOutCnt--;
+                if (timeOutCnt == 0)
+                {
+                    return false;        
+                }
+
                 JavascriptResponse x = await EvaluateScriptAsync( script);
 
                 Console.WriteLine((Boolean)getResult(x));
@@ -423,15 +440,16 @@ namespace Youtube
                 }
                 else
                 {
-                    await Task.Delay(delay);
+                    await Task.Delay(delay);                    
                 }
             }
-
+            return true;
         }
 
         private async Task MoveHome() {
-            await EvaluateScriptAsync("document.querySelector('#logo-icon-container').click();");
-            await WaitForPageLoadingAsync();
+            //await EvaluateScriptAsync("document.querySelector('#logo-icon-container').click();");
+            //await WaitForPageLoadingAsync();
+            await LoadPageAsync(browser, START_PAGE_URL);
         }
         
         private async Task SendKeyToBrowserAsync(int keyCode)
@@ -607,9 +625,13 @@ namespace Youtube
 
             while (((line = file.ReadLine()) != null && !file.Equals("")))
             {
-                string[] s = line.Split('=');
-                programConfig.Add(s[0], s[1]);
-                counter++;
+                if (!line.Contains("#"))
+                {
+                    string[] s = line.Split('=');
+                    programConfig.Add(s[0], s[1]);
+                    counter++;
+                }
+                
             }
 
             file.Close();

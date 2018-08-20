@@ -1,5 +1,12 @@
-﻿mode=comment
+﻿# 모드 : comment, love, test, password, profile, make-channel
+mode=comment
+# 스크립트 수행 후 대기시간 
 script-delay=1000
+# 프록시 체인지 대기시간
 prox-change-delay=2000
+# 쿠키 삭제 후 대기시간
 cookie-delete-delay=2000
-login-delay=1,2
+# 로그인 대기시간
+login-delay=5000,10000
+# 댓글 작성 후 대기시간
+comment-post-delay=10000
